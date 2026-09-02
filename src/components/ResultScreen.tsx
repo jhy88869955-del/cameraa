@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import confetti from 'canvas-confetti';
 import { Download, Printer, Copy, RotateCcw, Edit3, Check, Sparkles, Heart } from 'lucide-react';
 import { soundManager } from '../utils/audio';
 
@@ -20,15 +19,75 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
-    // Fire celebration confetti
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#F59E0B', '#F43F5E', '#10B981', '#3B82F6', '#8B5CF6'],
+    // Fire celebration confetti animation on canvas
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'fixed';
+    canvas.style.inset = '0';
+    canvas.style.width = '100vw';
+    canvas.style.height = '100vh';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '9999';
+    document.body.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      canvas.remove();
+      return;
+    }
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const colors = ['#FFD54F', '#FF8A65', '#81C784', '#64B5F6', '#BA68C8', '#FF80AB'];
+    const particles = Array.from({ length: 60 }).map(() => ({
+      x: canvas.width * 0.5 + (Math.random() - 0.5) * 200,
+      y: canvas.height * 0.5,
+      vx: (Math.random() - 0.5) * 16,
+      vy: -Math.random() * 14 - 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: Math.random() * 8 + 4,
+      rotation: Math.random() * 360,
+      vRot: (Math.random() - 0.5) * 10,
+      opacity: 1,
+    }));
+
+    let animId: number;
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.35; // gravity
+        p.rotation += p.vRot;
+        p.opacity -= 0.012;
+
+        if (p.opacity > 0) {
+          alive = true;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = Math.max(0, p.opacity);
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+          ctx.restore();
+        }
       });
-    } catch {}
+
+      if (alive) {
+        animId = requestAnimationFrame(animate);
+      } else {
+        canvas.remove();
+      }
+    };
+
+    animId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      canvas.remove();
+    };
   }, []);
 
   // Download PNG file
